@@ -1,0 +1,105 @@
+
+
+Jemkins integrate to Sonarqube
+
+1 connect to Sonarqube 
+  create a new project and enter name of project 
+  after create a token for the project
+
+
+2 Integrate to Sonarqube with jenkins
+  go to manage jenkins >>> Manage plugins >>> Available section >>> search for Sonarqube scanner >>> click on it >>> Install without restart
+
+3 Add of the Credentials of sonar to jenkins
+  go to Manage jenkins >>> Manage Credentials >>> click on Jenkins >>> click on the global Credentials >>> add credentials >>> go to Kind select secret text
+  >>> copy the sonarqube token >>> give the  Id & Description names as same
+
+4 Add of environment of sonarqube
+  go to Manage jenkins >>> Configure system >>> go to Sonarqube server and click on the environment of sonarqube
+  add sonarqube >>> give the name and url( public ip with port 9000)   >>> authentication token >>> save
+  ( On Daily basis take ip and add in the section)
+5 add of the sonarscanner plugin
+  Manage jenkins >>> global tool configuration go to sonarqube scanner >>> add and give the name >>> install automatically >>> save
+ 
+ stage('SonarQube analysis') 
+        {
+//    def scannerHome = tool 'SonarScanner 4.0';
+        steps
+        {
+        withSonarQubeEnv('sonarqube.8.9.6')
+        { 
+        // If you have configured more than one global server connection, you can specify its name
+//      sh "${scannerHome}/bin/sonar-scanner"
+        
+    }
+
+
+
+
+jenkins integrate to s3 bucket
+
+1 Create a Iam user and give roles and policies to Aws s3fullaccess and Aws Ec2full access to Iam user and download the key for iam
+2 Create a s3 bucket and untick the public access and create it
+3 Connect to jenkins server 
+4 Install S3 Plugin in Jenkins
+
+    Now go to Dashboard -> Manage Jenkins -> Manage Plugins and select Available tab. Find "S3 plugin" and install it.
+5 Go to Manage Jenkins and select Configure System. look for Amazon S3 Profiles and  Click on Add button for add S3 profile.
+
+6 Please provide a profile name, access key and secret access key for your AWS account. also, Create an IAM user with the relevant S3 Permissions and Click on Save button.
+
+7a Configure in Jenkins Job in freestyle job
+  * Go to Jenkins job and find Post Build Actions and add a new Post Build Action and select Publish Artifacts to S3 Bucket.
+  * Configure your S3 Profile and define the files to upload and Click on Save button.
+      enter source as file
+      enter destination bucket ( bucket name)
+      enter bucket region
+  * Now each time you run a (successful) build, your artifacts will automatically upload to your S3 bucket.
+  * Click Build Now
+  * Go to AWS S3 and verify it's upload or not
+7b  ** Configure in jenkins job in pipeline as code
+   stage('artifact to s3')
+        {
+            steps
+            {
+              s3Upload consoleLogLevel: 'INFO', dontSetBuildResultOnFailure: false, dontWaitForConcurrentBuildCompletion: false, entries: [[bucket: 'jenkins-2.3', excludedFile: '', flatten: false, gzipFiles: false, keepForever: false, managedArtifacts: false, noUploadOnFailure: false, selectedRegion: 'us-east-2', showDirectlyInBrowser: false, sourceFile: '**/*.war', storageClass: 'STANDARD', uploadFromSlave: false, useServerSideEncryption: false]], pluginFailureResultConstraint: 'FAILURE', profileName: 's3-jenkins', userMetadata: []
+            }
+         }
+
+    ** Install Pipeline AWS Plugin. Go to Manage Jenkins -> Manage Plugins -> Available tab -> Filter by 'Pipeline AWS'. Install the plugin.
+
+       Add Credentials as per your environment. Example here:
+
+      Jenkins > Credentials > System > Global credentials (unrestricted) -> Add
+
+       Kind = AWS Credentials and add your AWS credentials
+
+       Note the ID
+
+      Then in your Pipeline project (Similar to the code I use)
+
+      node {
+
+        stage('Upload')
+         {
+
+        dir('path/to/your/project/workspace')
+           {
+
+            pwd(); //Log current directory
+
+            withAWS(region:'yourS3Region',credentials:'yourID')
+                {
+
+                 def identity=awsIdentity();//Log AWS credentials
+
+                // Upload files from working directory 'dist' in your project workspace
+                s3Upload(bucket:"yourBucketName", workingDir:'dist', includePathPattern:'**/*');
+            }
+
+        }
+    }
+}
+
+
+
